@@ -39,8 +39,7 @@ class BannerArea extends Eloquent {
             return $results;
         });
 
-
-         shuffle($results);
+        shuffle($results);
 
         if (isset($results[0])) {
             return $results[0];
@@ -57,7 +56,7 @@ class BannerArea extends Eloquent {
      *
      * @return boolen|json
      */
-    public static function isValid(array $data, $id)
+    public static function isNotValid(array $data, $id)
     {
         BannerArea::$rules['slug'] .= $id;
 

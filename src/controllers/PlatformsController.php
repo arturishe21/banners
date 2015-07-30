@@ -37,9 +37,9 @@ class PlatformsController extends \BaseController
     {
         parse_str(Input::get('data'), $data);
 
-        $isValidation = BannerArea::isValid($data, $data['id']);
-        if ($isValidation) {
-            return $isValidation;
+        $isNotValidation = BannerArea::isNotValid($data, $data['id']);
+        if ($isNotValidation) {
+            return $isNotValidation;
         }
 
         BannerArea::updateOrCreate(['id'=>$data['id']], $data);

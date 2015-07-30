@@ -99,7 +99,7 @@ class Banner extends Eloquent {
      *
      * @return boolen|json
      */
-    public static function isValid(array $data)
+    public static function isNotValid(array $data)
     {
         $bannerFile = Input::file('file');
 

@@ -51,9 +51,9 @@ class BannersController extends \BaseController
     {
         parse_str(Input::get('data'), $data);
 
-        $isValidation = Banner::isValid($data);
-        if ($isValidation) {
-            return $isValidation;
+        $isNotValidation = Banner::isNotValid($data);
+        if ($isNotValidation) {
+            return $isNotValidation;
         }
 
         $data = Banner::replaceParams($data);
