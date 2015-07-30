@@ -1,11 +1,12 @@
 <?php namespace Vis\Banners\Controllers;
 
-use Config;
-use Input;
-use Request;
-use Response;
-use View;
-use Validator;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Input;
+use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Validator;
+
 use Vis\Banners\Banner;
 use Vis\Banners\BannerArea;
 
@@ -18,9 +19,10 @@ class BannersController extends \BaseController
     {
         $allpage = Banner::orderBy('created_at', "desc")->paginate(20);
 
-        $view = 'banners::banners';
         if (Request::ajax()) {
             $view = "banners::part.banners_banner_center";
+        } else {
+            $view = 'banners::banners';
         }
 
         return View::make($view)
@@ -35,12 +37,10 @@ class BannersController extends \BaseController
     {
         $id = Input::get("id");
         if (is_numeric($id)) {
-            $page = Banner::find($id);
-            $BannerArea = BannerArea::orderBy("created_at", "DESC")->get();
+            $info = Banner::find($id);
+            $bannerarea = BannerArea::orderBy("created_at", "DESC")->get();
 
-            return View::make('banners::part.form_banner')
-                    ->with('info', $page)
-                    ->with('bannerarea', $BannerArea);
+            return View::make('banners::part.form_banner', compact("info", "bannerarea"));
         }
     } // end fetchEditBanners
 
@@ -49,52 +49,30 @@ class BannersController extends \BaseController
      */
     public function doSaveBanner()
     {
-        $banner_file = Input::file('file');
         parse_str(Input::get('data'), $data);
 
-        if ($banner_file) {
-            $data['file'] = $banner_file;
-        } else {
-            Banner::$rules['file'] = "";
+        $isValidation = Banner::isValid($data);
+        if ($isValidation) {
+            return $isValidation;
         }
 
-        $validator = Validator::make($data, Banner::$rules);
-        if ($validator->fails()) {
-            return Response::json( array('status' => 'error', "errors_messages"=>$validator->messages()));
+        $data = Banner::replaceParams($data);
+
+        $uploadFile = Banner::uploadFile();
+
+        if ($uploadFile) {
+            $data['path_file'] = $uploadFile;
         }
 
-        if ($data['id']==0) {
-            $banner = new Banner;
-        } else {
-            $banner = Banner::find($data['id']);
-        }
+        Banner::updateOrCreate(['id' => $data['id']], $data);
 
-        $banner->title = $data['title'];
-        $banner->link =  $data['link'];
-        $banner->id_banners_platform = $data['banners_area_id'];
-        $banner->is_show = $data['status'];
-        $banner->is_target_blank = $data['target_blank'];
-        $banner->is_show_all = $data['is_show_all'];
-
-        $banner->show_start = str_replace(".",":",$data['show_start_data'])." ".$data['show_start_time'];
-        $banner->show_finish = str_replace(".",":",$data['show_finish_data'])." ".$data['show_finish_time'];
-
-        if ($banner_file) {
-            $destinationPath = "storage/banner";
-            $ext = $banner_file->getClientOriginalExtension();
-            $hashname = md5(time()) . '.' . $ext;
-            $full_path_img = "/" . $destinationPath . '/' . $hashname;
-            $upload_success = $banner_file->move($destinationPath, $hashname);
-            $banner->path_file = $full_path_img;
-        }
-
-        $banner->save();
+        Banner::flush();
 
         return Response::json(
-                            array(
-                                'status' => 'ok',
-                                'ok_messages' => "Баннер сохранен"
-                            )
+                    array(
+                        'status' => 'ok',
+                        'ok_messages' => "Баннер сохранен"
+                    )
         );
     } // end doSaveBanner
 
@@ -103,10 +81,9 @@ class BannersController extends \BaseController
      */
     public function fetchCreateBanner()
     {
-        $BannerArea = BannerArea::orderBy("created_at", "DESC")->get();
+        $bannerarea = BannerArea::orderBy("created_at", "DESC")->get();
 
-        return View::make('banners::part.form_banner')
-                ->with('bannerarea', $BannerArea);
+        return View::make('banners::part.form_banner', compact("bannerarea"));
     }// end fetchCreateBanner
 
     /*
@@ -116,7 +93,7 @@ class BannersController extends \BaseController
     {
         $id = Input::get("id");
         if (is_numeric($id)) {
-            $ban = Banner::find($id)->increment('click_count');
+            Banner::find($id)->increment('click_count');
         }
     }//end doIncrementClickCount
 
@@ -126,7 +103,8 @@ class BannersController extends \BaseController
     public function doDeleteBanner()
     {
         $id = Input::get("id");
-        $page = Banner::find($id)->delete();
+        Banner::find($id)->delete();
+        Banner::flush();
 
         return Response::json(array('status' => 'ok'));
     } //end doDeleteBanner

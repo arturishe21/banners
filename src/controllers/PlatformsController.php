@@ -1,12 +1,14 @@
 <?php namespace Vis\Banners\Controllers;
 
-use Config;
-use Input;
-use Request;
-use Response;
-use View;
-use Validator;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Input;
+use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Validator;
+
 use Vis\Banners\BannerArea;
+use Vis\Banners\Banner;
 
 class PlatformsController extends \BaseController
 {
@@ -16,9 +18,11 @@ class PlatformsController extends \BaseController
     public function fetchIndex()
     {
         $allpage = BannerArea::orderBy('created_at', "desc")->paginate(20);
-        $view = 'banners::banners_area';
+
         if (Request::ajax()) {
             $view = "banners::part.banners_area_center";
+        } else {
+            $view = 'banners::banners_area';
         }
 
         return View::make($view)
@@ -33,29 +37,15 @@ class PlatformsController extends \BaseController
     {
         parse_str(Input::get('data'), $data);
 
-        $rules =  BannerArea::$rules;
-        $rules['slug'] .= $data['id'];
-
-        $validator = Validator::make($data, $rules);
-        if ($validator->fails()) {
-            return Response::json(
-                array(
-                    'status'            => 'error',
-                    "errors_messages"   => $validator->messages()
-                )
-            );
+        $isValidation = BannerArea::isValid($data, $data['id']);
+        if ($isValidation) {
+            return $isValidation;
         }
 
-        if ($data['id'] != 0) {
-            $resource = BannerArea::find($data['id']);
-        } else {
-            $resource = new BannerArea;
-        }
+        BannerArea::updateOrCreate(['id'=>$data['id']], $data);
+        Banner::flush();
 
-        $resource->fill($data);
-        $resource->save();
-
-        $ok_messages = $data['id'] !=0 ?"Площадка изменена":"Площадка добавлена";
+        $ok_messages = $data['id'] !=0 ? "Площадка изменена" : "Площадка добавлена";
 
         return Response::json(
             array(
@@ -73,6 +63,7 @@ class PlatformsController extends \BaseController
         $id = Input::get("id");
         if (is_numeric($id)) {
             $page = BannerArea::find($id);
+
             return View::make('banners::part.form_area')->with('info', $page);
         }
     } // end fetchEditArea
@@ -89,7 +80,8 @@ class PlatformsController extends \BaseController
     public function doDeleteArea()
     {
         $id_page = Input::get("id");
-        $page = BannerArea::find($id_page)->delete();
+        BannerArea::find($id_page)->delete();
+        Banner::flush();
 
         return Response::json(array('status' => 'ok'));
     } //end doDeleteArea

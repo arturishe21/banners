@@ -1,4 +1,3 @@
-
 <!-- Modal -->
 <div class="modal fade" id="modal_form" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" data-backdrop="static">
   <div class="modal-dialog ">
